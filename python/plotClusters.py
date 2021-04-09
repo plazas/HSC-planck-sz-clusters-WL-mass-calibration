@@ -8,7 +8,7 @@ dirRoot = "/project/plazas/WORK/HSC/sz_clusters_mass_cal/"
 def selectGalaxyCatalog(d, star_mask = "S18A", d_sm = None): 
     print("Number of galaxies before any selection: %d" % len(d))  
     # apply FDFC mask 
-    m = hp.read_map(dirRoot + "s19a_fdfc_hp_contarea_izy-gt-5_trimmed.fits", nest = True, dtype = np.bool) 
+    m = hp.read_map(dirRoot + "s19a_fdfc_hp_contarea_izy-gt-5_trimmed.fits", nest = True, dtype = bool) 
     indices_map = np.where(m)[0] 
     nside = hp.get_nside(m) 
     phi = np.radians(d["RA"]) 
@@ -34,7 +34,7 @@ print (" number NAME RA[deg] DEC[deg] REDSHIFT MSZ (10^14 M_sun)")
 planckNAME, planckRA, planckDEC, planckREDSHIFT, planckMSZ = [], [], [], [], []
 numberPlackClusters = 0
 for i, row in enumerate(new_data):
-    print (i, row['NAME'], row['RA'], row['DEC'], row['REDSHIFT'], row['MSZ'])
+    print (i+1, row['NAME'], row['RA'], row['DEC'], row['REDSHIFT'], row['MSZ'])
     planckNAME.append(row['NAME'])
     planckRA.append(row['RA'])
     planckDEC.append(row['DEC'])
@@ -103,7 +103,8 @@ cut = 0.1
 counter=1
 for (r, d, z, m) in zip(planckRA, planckDEC, planckREDSHIFT, planckMSZ):
     diffRA, diffDEC, diffZ = np.fabs(ra_cam - r), np.fabs(dec_cam - d), np.fabs(zcl_cam - z)
-    mask = (diffRA <= cut) & (diffDEC <= cut) & ((diffZ <= cut))
+    
+    mask = (diffRA <= cut) & (diffDEC <= cut) #& ((diffZ <= cut))
 
     print (" Number: ", counter)
     print ("Plack: ", r, d, z, m)
@@ -168,7 +169,7 @@ counter=1
 for (r, d, z, m) in zip(planckRA, planckDEC, planckREDSHIFT, planckMSZ):
     #print (r, d, z, m)
     diffRA, diffDEC, diffZ = np.fabs(ra_sdss - r), np.fabs(dec_sdss - d), np.fabs(zcl_sdss - z)
-    mask = (diffRA <= cut) & (diffDEC <= cut) & ((diffZ <= cut))
+    mask = (diffRA <= cut) & (diffDEC <= cut) #& ((diffZ <= cut))
 
     print ("Number: ", counter)
     print ("Plack: ", r, d, z, m)
