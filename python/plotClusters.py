@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import healpy as hp 
 import astropy.io.fits as pf
+from matplotlib.backends.backend_pdf import PdfPages
+
 
 dirRoot = "/project/plazas/WORK/HSC/sz_clusters_mass_cal/"
 
@@ -41,10 +43,12 @@ for i, row in enumerate(new_data):
     planckREDSHIFT.append(row['REDSHIFT'])
     planckMSZ.append(row['MSZ'])
     numberPlackClusters+=1
-"""
+
 # Plot
+pp=PdfPages("clusters_area_overlap_PSZ2_hsc_s19a.pdf")
+
 sc = plt.scatter(new_data['RA'], new_data['DEC'], s=10*masSelClusters, c=redshiftSelClusters, vmin=0.05,
-                 vmax=0.51)
+                 vmax=0.51, cmap='viridis')
 plt.scatter(data[~sel]['RA'], data[~sel]['DEC'], s=data[~sel]['MSZ'], c='k')
 #plt.axes().set_aspect(1./2)
 plt.xlim ([370,-10]) 
@@ -52,9 +56,11 @@ plt.ylim ([-10,50])
 plt.xlabel('RA [deg]')
 plt.ylabel('DEC [deg]')
 plt.grid(True)
-plt.colorbar(sc)
-plt.show()
-"""
+plt.colorbar(sc, label='Redshift')
+pp.savefig()
+pp.close()
+#plt.show()
+
 
 
 ### --- Read camira S20 cluster catalog 
