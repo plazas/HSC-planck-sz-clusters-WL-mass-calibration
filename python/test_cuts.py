@@ -1,7 +1,11 @@
 import numpy as np
 import astropy.io.fits as pf
 import ColorColor as cc
+import matplotlib.pyplot as plt
 
+from matplotlib.backends.backend_pdf import PdfPages  # AP
+
+# Color-Color cuts from Medezinski+18
 def SelectSources(table, r, g1, g2, b, CCparams, rlim, blim, ext='mag_forced_cmodel'):
     """
     SelectSources(table, r,g1,g2,b, CCparams, rlim, blim)
@@ -12,54 +16,98 @@ def SelectSources(table, r, g1, g2, b, CCparams, rlim, blim, ext='mag_forced_cmo
     y-axis is b-g2 color, x-axis is g1-r colors, where r,g1,g2,b define the 
     filter column name first letter (e.g., 'z','i','r','g') and the rest of the column name goes in ext, 
     e.g. ext='mag_forced_cmodel'.
-
-    E.g.,
+    e.g.,
     aCM, bCM, aCC, bCC = [-0.025, 1.6, 2.276, -0.152]
     rlim = [0.5, 21, 28, -0.5, 2.]
     blim = [-3, -0.8, 22, 28, 0.5, 0.5]
- 
+
+    r, g1, g2, b---> z, r, i, g
+
     Parameters
     ----------
-    table : 
-
-    rFilterPrefix : `str`
-        Prefix for r filter
-
+    table : `astropy.io.fits.fitsrec.FITS_rec`
+        Input catalog
+    r : `str`
+        Color prefix: y-axis is b-g2 color, x-axis is g1-r colors.
+  
+    g1 : `str`
+        Color prefix: y-axis is b-g2 color, x-axis is g1-r colors.
+    g2 : `str`
+        Color prefix: y-axis is b-g2 color, x-axis is g1-r colors.
+    b : `str`
+        Color prefix: y-axis is b-g2 color, x-axis is g1-r colors.
+    CCParams : `list`
+        List with four components: aCM, bCM, aCC, bCC 
+            aCM : Slope of line that follows red-sequence in g1-r as a function
+                  of "r" magnitude (Eq. A3 in Medezinski+18)
+            bCm : Ordinate intercept of line line that follows red-sequence in 
+                  g1-r as a function of "r" magnitude (Eq. A3 in Medezinski+18).
+            aCC : Slope of line that follows the red-sequence in "b-g2" and 
+                  "g1-r" color space (Eq. A1 in Medezinski+18).
+            bCC : Ordinate intercept of the line that follows the red-sequence in "b-g2" and 
+                  "g1-r" color space (Eq. A1 in Medezinski+18).
+    rlim : `list`
+        List with cuts in CC space for "red" galaxies, see Appendix A1 in
+        Medezinski+18
+    
+    blim : `list`
+        List with cuts in CC space for "blue" galaxies, see Appendix A1 in
+        Medezinski+18
     Return
     ------
-
+       red : `astropy.io.fits.fitsrec.FITS_rec`
+          Subset of input catalog with "red" background galaxies.
+       blue : `astropy.io.fits.fitsrec.FITS_rec`
+          Subset of input catalog wiht "blue" background galaxies.
+       blueOrRedflag : `list`[`bool`]
+           List with flags that identify galaxies that are "red" or "blue".
+          
     Notes
     -----
-
+    The original code is from https://github.com/elinor-lev/SourceSelection,
+    implementing cuts in the appendix of Medezinski+18 (1706.00427).
+    For filters like in HSC, "g1-r" is "r-z", and "b-g2" is "g-i"
+    (RZ and BR in the code below, respectively).
+    Medezinski+18 define two sets of "rlim" and "blim" cuts for clusters
+    at zl >=0.4 and zl < 0.4.
     """
     aCM, bCM, aCC, bCC = CCparams
-    Z = table[r+ext]
+    
+    # Correct for extinction. It is the columns 'a_[grizy]' in the catalog.
+    table[r+ext]-=table['a_'+r.split('_')[1]]
+    table[g1+ext]-=table['a_'+g1.split('_')[1]]
+    table[g2+ext]-=table['a_'+g2.split('_')[1]]
+    table[b+ext]-=table['a_'+b.split('_')[1]]
+    
+    Z = table[r+ext] #- table['a_'+]
     RZ = table[g1+ext] - table[r+ext]    # r-z
     BR = table[b+ext] - table[g2+ext]    # g-i
     
     f1 = aCM*Z + bCM # color-mag R-I seq
-    seqdif1 = RZ - f1
+    seqdif1 = RZ - f1 # Eq. 34
     CCf = aCC * RZ + bCC          #color-color cluster sequence
     CCf2 = -1./aCC*RZ - bCC/aCC**2 # line perpendicular to color-color sequence
     CCdif = BR-CCf                 # B-R -CC Sequence
-    CCdif2 = (BR-CCf2)/(1.+1./aCC**2)# B-R -perCC Sequence
+    CCdif2 = (BR-CCf2)/(1.+1./aCC**2)# B-R -perCC Sequence, blue\Deltacolor#2
     
-    r_rzlim    = ( RZ > rlim[0] ) # RZ lower limit, separate red from blue
-    r_maglim   =  ( Z > rlim[1] ) & ( Z < rlim[2] ) # magnitude limit, redderst band
-    r_CCseqlim = ( CCdif < rlim[3] ) &  ( CCdif2 < rlim[4] )
+    r_rzlim    = ( RZ > rlim[0] ) # RZ lower limit, separate red from blue / Eq. 28
+    r_maglim   =  ( Z > rlim[1] ) & ( Z < rlim[2] ) # magnitude limit, redderst band  / Eq. 29
+    r_CCseqlim = ( CCdif < rlim[3] ) &  ( CCdif2 < rlim[4] ) # Eq. 26 and Eq. 27
     red = table[ r_maglim & r_rzlim & r_CCseqlim ]
     # (seqdif1 < rlim[1] # doesn't exist...
     
-    b_CMseqlim = (seqdif1 < blim[1]) & (seqdif1>blim[0]) & (BR<4)
+    b_CMseqlim = (seqdif1 < blim[1]) & (seqdif1 > blim[0]) & (BR<4)
     b_maglim   =  ( Z > blim[2] ) & ( Z < blim[3] ) # magnitude limit, redderst band
     b_rzlim    = ( RZ < blim[4]) # RZ upper limit, separate red from blue
     b_CCseqlim = ( CCdif2 < blim[5] )
     blue =  table[  b_rzlim & (b_CCseqlim |  b_CMseqlim )  & b_maglim ]
     
-    # use cuts from both red and blue: does not work (AP)
-    redAndBlue = table [r_maglim & r_rzlim & r_CCseqlim & b_rzlim & (b_CCseqlim |  b_CMseqlim )  & b_maglim]
+    redFlag = r_maglim & r_rzlim & r_CCseqlim
+    blueFlag = b_rzlim & (b_CCseqlim |  b_CMseqlim )  & b_maglim
     
-    return red, blue, redAndBlue
+    blueOrRedFlag = redFlag | blueFlag
+    
+    return red, blue, blueOrRedFlag
 
 
 """
@@ -182,19 +230,26 @@ filename="/project/plazas/WORK/HSC/weaklens_pipeline/DataStore/S19A_v2.0/GAMA09H
 data = pf.open(filename)[1].data
 
 #print (len(data))
-CCParams = [-0.025, 1.6, 2.276, -0.152]
-rlim = [0.5, 21, 28, -0.5, 2.]
-blim = [-3, -0.8, 22, 28, 0.5, 0.5]
+CCParams = [-0.0248, 1.604, 2.276, -0.152] # Slope and intercept of lines in Eq. 23 and 21
+#rlim = [0.5, 21, 28, -0.5, 2.]
+rlim = [0.5, 21, 28, -0.7, 4.] # For zl < 0.4, Eq. 26-27 of appendix of Medezinski+18
+#blim = [-3, -0.8, 22, 28, 0.5, 0.5]
+blim = [-3, -0.8, 22, 28, 0.5, 0.5] # For zl < 0.4, Eq. 35 of appendix of Medezinski+18
+
 
 #CCparams [-0.039063287566281635, 1.4441117764471074, -1.595881595881596, -0.16631566631566574]
 
-red, blue, redAndBlue = SelectSources (data, 'forced_z', 'forced_r', 'forced_g', 'forced_i', CCParams, rlim, blim,
+red, blue, redOrBlueFlag = SelectSources (data, 'forced_z', 'forced_r', 'forced_i', 'forced_g', CCParams, rlim, blim,
         ext="_cmodel_mag")
-print (len(data))
-print (len(red), len(blue), len(red) + len(blue))
-print (len(redAndBlue))
+
+
+newSources = data[redOrBlueFlag]
+
+print ("Data, new sources: ", len(data), len(newSources))
+
+
 #print ("RED: ", red)
-import ipdb; ipdb.set_trace()
+#import ipdb; ipdb.set_trace()
 #columns = [ 'z', 'r', 'g', 'i']
 #cc.run_CCselection (data, columns, )
 
@@ -205,15 +260,34 @@ import ipdb; ipdb.set_trace()
 # An ACT cluster in XMM: 37.9292, -4.8222 (approx)
 # Exact: see Miyatake+19 (ACT-CL J0231.7-0452 2:31:43.63 −4:52:56.16)
 
-CCparams = [-0.06939717631541527, 2.1186868686868676, -1.5184544892337102, -0.5815448080058467]
-columns = [ 'z', 'r', 'g', 'i', 'ira', 'idec']
-center = [37.93179166666667, -4.882266666666667]
-scale = 3600 # deg to arcmin???
+#CCparams = [-0.06939717631541527, 2.1186868686868676, -1.5184544892337102, -0.5815448080058467]
+#columns = [ 'z', 'r', 'g', 'i', 'ira', 'idec']
+#center = [37.93179166666667, -4.882266666666667]
+#scale = 3600 # deg to arcmin???
 
-red, blue, back, CCParams = cc.run_CCselection (data, columns, center, scale=scale, CClim = np.array([[-1.5, 2.5],[-3.5,
-    5.0]]), CCparams = CCparams)
+#red, blue, back, CCParams = cc.run_CCselection (data, columns, center, scale=scale, CClim = np.array([[-1.5, 2.5],[-3.5,
+#    5.0]]), CCparams = CCparams)
 
-print (len(red), len(blue), len(back), len(CCParams), CCParams)
+#print (len(red), len(blue), len(back), len(CCParams), CCParams)
 
+CClim = np.array([[-1.5, 2.5],[-3.5,5.0]])
 
+singleFigure=False
+pp = PdfPages("./test_cc_cuts.pdf")
 
+#%% CC plot
+plt.figure()
+plotargs = { 'facecolors':'0.25','edgecolor':'0.25'}
+obj1 = cc.CCplot(newSources,'forced_z', 'forced_r', 'forced_i', 'forced_g', pp, singleFigure=singleFigure,
+        axis=CClim,plotpoints=True, CCparams=CCParams, 
+                ext="_cmodel_mag", **plotargs)
+plotargs = { 'facecolors':'r','edgecolor':'r'}
+obj2 = cc.CCplot(red,'forced_z', 'forced_r', 'forced_i', 'forced_g', pp, singleFigure=singleFigure, axis=CClim,plotpoints=True,
+                 ext="_cmodel_mag", CCparams=CCParams, **plotargs)
+plotargs = { 'facecolors':'b','edgecolor':'b'}
+obj3 = cc.CCplot(blue,'forced_z', 'forced_r', 'forced_i', 'forced_g', pp, singleFigure=singleFigure, axis=CClim,plotpoints=True,
+                 ext="_cmodel_mag", CCparams=CCParams, **plotargs)
+if singleFigure:
+    pp.savefig()
+
+pp.close()
