@@ -224,10 +224,16 @@ for key in filePairs:
                         title=f"{filePairs[key][2]} and {filePairs[key][3]}. Medezinski+18")
 pp.close()
 
+
+labels=['planck cc', 'camira cc', 'planck p-cuts', 'camira p-cuts']
+
 # S/N calculation
-for x in [planck_centers_cc_cuts, camira_centers_cc_cuts, planck_centers_p_cuts, camira_centers_p_cuts]:
-    dsigma  = x[1:,5] 
+for x, lab in zip([planck_centers_cc_cuts, camira_centers_cc_cuts, planck_centers_p_cuts,
+    camira_centers_p_cuts], labels):
+    dsigma  = x[1:,5]
     dsigma_err = x[1:, 11]
     SNR = np.sqrt(np.sum(dsigma**2/dsigma_err**2))
-    print ("SNR: ", SNR)
+    chi2 = np.sum((dsigma/dsigma_err)**2)
+    #sum_i((deltaSigma(r_i)/deltaSigma_err(r_i))^2)
+    print (f"{lab}: SNR: {SNR}, CHI2: {chi2} ")
 

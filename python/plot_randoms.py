@@ -4,9 +4,12 @@ import numpy as np
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 
+## Create files iwht random points to calculate weak lensing signal around them
+
+
 files=glob.glob("/project/plazas/WORK/HSC/weaklens_pipeline/DataStore/xiangchong.li/S19ACatalogs/v2/catalog_others/*rand*")
 
-downscale=100000
+downscale=80000 #100000
 allRa=[]
 allDec=[]
 for fieldFile in files:
@@ -63,9 +66,10 @@ for (ra, dec, fileName) in zip(allRa, allDec, files):
     plt.colorbar(sc, label='Redshift')
     pp.savefig(fig)
 
-raVec=np.array(raVec)
-decVec=np.array(decVec)
-zVec=np.array(zVec)
+print ("Final number of randoms: ", len(raVec))
+raVec=np.array(raVec[:1900])
+decVec=np.array(decVec[:1900])
+zVec=np.array(zVec[:1900])
 assert (len(raVec) == len(decVec))
 assert (len(decVec) == len(zVec))
 weight = np.ones(len(raVec))
@@ -80,8 +84,19 @@ outputData = np.array([raVec, decVec, zVec, weight]).astype(np.float64)
 print ("Types: ", type(outputData))
 print (outputData)
 print (outputData.shape)
-fileNameRandoms = "/project/plazas/WORK/HSC/weaklens_pipeline/DataStore/random_points_s19a.dat"
+outputDataTranspose = np.transpose(outputData)
+# Save singel file
+fileNameRandoms = "/project/plazas/WORK/HSC/weaklens_pipeline/DataStore/random_points_s19a_test.dat"
 np.savetxt(fileNameRandoms, np.transpose(outputData))
+
+# Split the 1900 random points into 100 files of 19 points each. Save the 100 files in disk. 
+
+part = np.split(outputDataTranspose, 100)
+root="/project/plazas/WORK/HSC/weaklens_pipeline/DataStore/randoms_S19A/"
+for i, randomRealization in enumerate(part):
+    fileName=root+f"random_points_s19a_{i}.dat"
+    np.savetxt(fileName, randomRealization)
+
 #pp.savefig()
 pp.close()
 #plt.show()
