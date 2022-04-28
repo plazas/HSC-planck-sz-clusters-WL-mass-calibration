@@ -190,7 +190,7 @@ def plotDeltaSigma (file1, file2, pdfPages, legend1='', legend2='', multByR=Fals
     #fig.suptitle(title)
     pp.savefig(fig)
     plt.clf()
-    multByR = False
+    multByR = True
 
 
 # Planck vs Camira centers for P-cuts

@@ -7,6 +7,12 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 dirRoot = "/project/plazas/WORK/HSC/sz_clusters_mass_cal/"
 
+#https://towardsdatascience.com/how-to-create-and-use-custom-matplotlib-style-sheet-9393f498063
+#https://github.com/bernardinelli/custom-matplotlib/blob/master/custom.mplstyle
+
+custom_plot_file = "/project/plazas/WORK/HSC/sz_clusters_mass_cal/code/HSC-planck-sz-clusters-WL-mass-calibration/python/custom.mplstyle"
+plt.style.use(custom_plot_file)
+
 def selectGalaxyCatalog(d, star_mask = "S18A", d_sm = None): 
     print("Number of galaxies before any selection: %d" % len(d))  
     # apply FDFC mask 
@@ -47,16 +53,20 @@ for i, row in enumerate(new_data):
 # Plot
 pp=PdfPages("clusters_area_overlap_PSZ2_hsc_s19a.pdf")
 
-sc = plt.scatter(new_data['RA'], new_data['DEC'], s=10*masSelClusters, c=redshiftSelClusters, vmin=0.05,
+fig = plt.figure(figsize=(18, 6))
+aspect_ratio = 1./6
+sc = plt.scatter(new_data['RA'], new_data['DEC'], s=18*masSelClusters, c=redshiftSelClusters, vmin=0.05,
                  vmax=0.51, cmap='viridis')
-plt.scatter(data[~sel]['RA'], data[~sel]['DEC'], s=data[~sel]['MSZ'], c='k')
-#plt.axes().set_aspect(1./2)
+plt.scatter(data[~sel]['RA'], data[~sel]['DEC'], s=5*data[~sel]['MSZ'], c='k',alpha=0.5)
+#plt.axes().set_aspect(aspect_ratio)
 plt.xlim ([370,-10]) 
 plt.ylim ([-10,50])
 plt.xlabel('RA [deg]')
 plt.ylabel('DEC [deg]')
 plt.grid(True)
 plt.colorbar(sc, label='Redshift')
+plt.tight_layout()
+#plt.axes().set_aspect(aspect_ratio)
 pp.savefig()
 pp.close()
 #plt.show()

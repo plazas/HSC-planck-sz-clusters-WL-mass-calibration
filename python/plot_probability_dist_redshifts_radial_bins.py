@@ -42,12 +42,26 @@ for row in data:
 
 print ("pofz_radial_bins: ", pofz_radial_bins)
 
+mean_pofz = []
 for row in data:
     rr, zz, pofz = row
+    mean_pofz
     rr=10**rr
     pofz_radial_bins[rr]['z'].append(zz)
     pofz_radial_bins[rr]['p_of_z'].append(pofz)
 
+mean_pofz = []
+for rr in pofz_radial_bins:
+    pofz_array = pofz_radial_bins[rr]['p_of_z']
+    mean_pofz.append(pofz_array)
+
+mean_pofz = np.array(mean_pofz)
+print ("before mean: ", mean_pofz)
+mean_pofz = np.mean(mean_pofz, axis=0, dtype=np.float64)
+print ("HOLA mean: ", mean_pofz)
+
+#for x in mean_pofz:
+#    print (f"{x}")
 
 #assert(len(rbins) == len(pofz))
 pp = PdfPages ("pofz_radial_bins.pdf")
@@ -55,18 +69,50 @@ pp = PdfPages ("pofz_radial_bins.pdf")
 fig = plt.figure(figsize=(15,15))
 for i, rr in enumerate(pofz_radial_bins):
     #fig = plt.figure(figsize=(10,10))
-    fig.add_subplot(4,5,i+1)
+    #fig.add_subplot(1,1,1)#4,5,i+1)
     z, pofz = pofz_radial_bins[rr]['z'], pofz_radial_bins[rr]['p_of_z']
+    if i == 0:
+        print (rr, pofz , mean_pofz, (pofz - mean_pofz)/mean_pofz)
     plt.plot(z, pofz, '-', label=f"rbin: {rr:.3f} \n Npairs: {npairs[i]}")
+    plt.plot(z, mean_pofz, 'k-', label=f"Mean")
     plt.yscale('log')
     plt.legend(loc='upper right')
     plt.xlabel('z')
     plt.ylabel('p(z)')
-    plt.xlim([0,4])
+    plt.xlim([1e-5,1])
+    plt.xlim([0,1])
     plt.suptitle('P-cut', fontsize=15)
 
 plt.tight_layout()
 pp.savefig(fig)
+
+fig = plt.figure(figsize=(15,15))
+for i, rr in enumerate(pofz_radial_bins):
+    #fig = plt.figure(figsize=(10,10))
+    #fig.add_subplot(1,1,1)#4,5,i+1)
+    z, pofz = pofz_radial_bins[rr]['z'], pofz_radial_bins[rr]['p_of_z']
+    if i == 0:
+        print (rr, pofz , mean_pofz, (pofz - mean_pofz)/mean_pofz)
+    # only z<1
+    z = np.array(z)
+    mask = z < 1.0
+    delta = (pofz - mean_pofz)/mean_pofz
+    delta = delta[mask]
+    z = z[mask]
+    plt.plot(z, delta, '-', label=f"rbin: {rr:.3f} \n Max: {np.max(delta)}")
+    #plt.plot(z, mean_pofz, 'k-', label=f"Mean")
+    plt.yscale('linear')
+    plt.legend(loc='upper right')
+    plt.xlabel('z')
+    plt.ylabel('p(z) - mean_pofz / mean_pofz')
+    plt.ylim([-1, 1])
+    plt.xlim([0,1])
+    plt.suptitle('P-cut', fontsize=20)
+
+plt.tight_layout()
+pp.savefig(fig)
+
+
 
 
 #fig = plt.figure(figsize=(20,10))
