@@ -52,7 +52,6 @@ for m, z in zip(mass_planck, redshift):
     print (f"{m/factor}, {mcorr/factor}")
 
 
-"""
 pp = PdfPages("mass_function.pdf")
 
 # https://bdiemer.bitbucket.io/colossus/_static/tutorial_lss_mass_function.html
@@ -106,6 +105,5 @@ plt.plot(M[:-2], -alpha(M)[:-2], '-', label = f'z = {z}')
 plt.legend()
 pp.savefig()
 
-pp.close()
 """
 
